@@ -82,6 +82,9 @@ private:
 	static NODE_GETTER(JS_open);
 	static NODE_GETTER(JS_inTransaction);
 
+	static NODE_METHOD(JS_progressHandler);
+	static int ProgressHandlerCallback(void* data);
+
 	static bool Deserialize(v8::Local<v8::Object> buffer, Addon* addon, sqlite3* db_handle, bool readonly);
 	static void FreeSerialization(char* data, void* _);
 
@@ -100,4 +103,5 @@ private:
 	const v8::Global<v8::Value> logger;
 	std::set<Statement*, CompareStatement> stmts;
 	std::set<Backup*, CompareBackup> backups;
+	v8::Global<v8::Function> progress_handler;
 };

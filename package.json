@@ -1,5 +1,5 @@
 {
-  "name": "better-sqlite3",
+  "name": "better-sqlite3-with-progress",
   "version": "12.6.2",
   "description": "The fastest and simplest library for SQLite in Node.js.",
   "homepage": "http://github.com/WiseLibs/better-sqlite3",
@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "bindings": "^1.5.0",
-    "prebuild-install": "^7.1.1"
+    "prebuild-install": "^7.1.1",
+    "node-gyp": ">=10"
   },
   "overrides": {
     "prebuild": {
@@ -38,7 +39,7 @@
     "sqlite3": "^5.1.6"
   },
   "scripts": {
-    "install": "prebuild-install || node-gyp rebuild --release",
+    "install": "node-gyp rebuild --release",
     "build-release": "node-gyp rebuild --release",
     "build-debug": "node-gyp rebuild --debug",
     "test": "mocha --exit --slow=75 --timeout=5000",

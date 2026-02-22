@@ -136,6 +136,7 @@ INIT(Database::Init) {
 	SetPrototypeMethod(isolate, data, t, "close", JS_close);
 	SetPrototypeMethod(isolate, data, t, "defaultSafeIntegers", JS_defaultSafeIntegers);
 	SetPrototypeMethod(isolate, data, t, "unsafeMode", JS_unsafeMode);
+	SetPrototypeMethod(isolate, data, t, "progressHandler", JS_progressHandler);
 	SetPrototypeGetter(isolate, data, t, "open", JS_open);
 	SetPrototypeGetter(isolate, data, t, "inTransaction", JS_inTransaction);
 	return t->GetFunction(OnlyContext).ToLocalChecked();
@@ -414,4 +415,39 @@ NODE_GETTER(Database::JS_open) {
 NODE_GETTER(Database::JS_inTransaction) {
 	Database* db = Unwrap<Database>(info.This());
 	info.GetReturnValue().Set(db->open && !static_cast<bool>(sqlite3_get_autocommit(db->db_handle)));
+}
+
+int Database::ProgressHandlerCallback(void* data) {
+	Database* db = static_cast<Database*>(data);
+	v8::Isolate* isolate = v8::Isolate::GetCurrent();
+	v8::HandleScope scope(isolate);
+	v8::Local<v8::Function> fn = db->progress_handler.Get(isolate);
+	v8::MaybeLocal<v8::Value> result = fn->Call(
+		isolate->GetCurrentContext(),
+		v8::Undefined(isolate),
+		0, NULL
+	);
+	if (result.IsEmpty()) {
+		db->was_js_error = true;
+		return 1;
+	}
+	return result.ToLocalChecked()->BooleanValue(isolate) ? 1 : 0;
+}
+
+NODE_METHOD(Database::JS_progressHandler) {
+	Database* db = Unwrap<Database>(info.This());
+	REQUIRE_DATABASE_OPEN(db);
+
+	if (info.Length() == 0) {
+		sqlite3_progress_handler(db->db_handle, 0, NULL, NULL);
+		db->progress_handler.Reset();
+		return;
+	}
+
+	REQUIRE_ARGUMENT_INT32(first, int interval);
+	REQUIRE_ARGUMENT_FUNCTION(second, v8::Local<v8::Function> fn);
+
+	UseIsolate;
+	db->progress_handler.Reset(isolate, fn);
+	sqlite3_progress_handler(db->db_handle, interval, ProgressHandlerCallback, db);
 }
